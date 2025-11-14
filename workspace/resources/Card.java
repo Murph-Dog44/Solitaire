@@ -1,3 +1,5 @@
+// class for the cards used in the game with methods to get information on the cards
+
 package resources;
 import java.awt.Dimension;
 import java.awt.Graphics;
@@ -125,7 +127,7 @@ public class Card extends JPanel{
 		/**
 		 * Turns the card with the face up
 		 */
-		public void show() {
+		public void show(){
 			isReversed = false;
 		}
 

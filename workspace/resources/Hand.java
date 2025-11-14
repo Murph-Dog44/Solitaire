@@ -1,3 +1,5 @@
+// creates a module for the player hand so that the player can hit and stand and the game updates for the individual player hand
+
 package resources;
 
 import java.util.ArrayList;
@@ -28,18 +30,20 @@ public class Hand {
     JButton doubleDown;
     Blackjack blackjack;
     Stack<Card> cards;
-	Stack<Card> dealerH;
-    // constructor
+	GUI gui;
 
-    public Hand(Stack<Card> dealer) {
-        
-        // create hit and stand buttons
-        blackjack = new Blackjack();
-        hit = new JButton("Hit");
-        stand = new JButton("Stand");
-        doubleDown = new JButton("Double Down");
-		dealerH = dealer;
-    }
+	public Hand(Stack<Card> cards, Blackjack blackjack, GUI g) {
+		
+		this.cards = cards;
+        this.blackjack = blackjack;
+        this.gui = g;
+
+		// create hit and stand buttons
+		blackjack = new Blackjack();
+		hit = new JButton("Hit");
+		stand = new JButton("Stand");
+		doubleDown = new JButton("Double Down");
+	}
 
     public Stack<Card> getCards() {
         return cards;
@@ -48,121 +52,70 @@ public class Hand {
     public void addCard(Card c) {
         cards.push(c);
     }
+
+	// returns the layerd pane containing the buttons and cards for the hand module
     public JLayeredPane returnPane(){
+
         JLayeredPane pane = new JLayeredPane();
+        pane.setPreferredSize(new Dimension(400, 180));
+
+        // place cards
+        Object cardsArray[] = cards.toArray();
+        for (int i = 0; i < cardsArray.length; i++) {
+            Card card = (Card) cardsArray[i];
+            Dimension pd = new Dimension(100, 145);
+            card.setBounds(i * 30, i * 10, pd.width, pd.height);
+            pane.add(card, i);
+        }
+
+        // position buttons
+        hit.setBounds(10, 150, 80, 24);
+        stand.setBounds(100, 150, 80, 24);
+        doubleDown.setBounds(190, 150, 110, 24);
         pane.add(hit);
         pane.add(stand);
         pane.add(doubleDown);
 
-        Object cardsArray[];
-        cardsArray = cards.toArray(); 
-		for (int i = 0; i < cardsArray.length; i++) {
-			Card card = (Card) cardsArray[i];
-			Dimension pd = new Dimension(100, 145);
-			card.setBounds(i * 30 + 100, i * 10, pd.width, pd.height);
-			pane.add(card, i);
-		}
-
+        // listeners call the shared Blackjack and then ask GUI to refresh
         hit.addActionListener(new ActionListener() {
-			public void actionPerformed(ActionEvent e) {
-				blackjack.hit();
-				if (blackjack.gameOver) {
-					hit.setEnabled(false);
-					stand.setEnabled(false);
-					doubleDown.setEnabled(false);
-					
-					JTextPane textPane = new JTextPane();
-					textPane.setText(blackjack.backgroundText);
-					Font boldFont = new Font(textPane.getFont().getName(), Font.BOLD, textPane.getFont().getSize());
-					textPane.setFont(boldFont);
-					textPane.setOpaque(false);
-					textPane.setEditable(false);
-					pane.add(textPane);
-					
-					JTextPane scorePane = new JTextPane();
-					scorePane.setText(""+blackjack.score);
-					scorePane.setFont(boldFont);
-					scorePane.setOpaque(false);
-					scorePane.setEditable(false);
-					pane.add(scorePane);
+            public void actionPerformed(ActionEvent e) {
+                blackjack.hit(cards); 
+                if (blackjack.gameOver) {
+					disableButtons();
 				}
-/*				southPanel.removeAll();
-				playerPane = drawPile(game.playerHand);
-				playerPane.setPreferredSize(new Dimension(200, 200));
-				southPanel.add(playerPane);
-				northPanel.removeAll();
-				dealerPane = drawPile(game.dealerHand);
-				dealerPane.setPreferredSize(new Dimension(200, 200));
-				northPanel.add(dealerPane);
-				update();
-                */
-
-			}
-		});
-
-
-        stand.addActionListener(new ActionListener() {
-			public void actionPerformed(ActionEvent e) {
-				blackjack.stand();
-				stand.setEnabled(false);
-				hit.setEnabled(false);
-				doubleDown.setEnabled(false);
-
-				JTextPane textPane = new JTextPane();
-				textPane.setText(blackjack.backgroundText);
-				Font boldFont = new Font(textPane.getFont().getName(), Font.BOLD, textPane.getFont().getSize());
-				textPane.setFont(boldFont);
-				textPane.setOpaque(false);
-				textPane.setEditable(false);
-				pane.add(textPane);
-					
-				JTextPane scorePane = new JTextPane();
-				scorePane.setText(""+blackjack.score);
-				scorePane.setFont(boldFont);
-				scorePane.setOpaque(false);
-				scorePane.setEditable(false);
-				pane.add(scorePane);
-
+					gui.onHandUpdated();
             }
         });
 
-    // add all cards in "cards" to the pane with an offset(look at how its done in gui)
-    // add all buttons
+		// ends play for player, gives dealer cards and then determines win/loss and updates screen
+        stand.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+                blackjack.stand(cards);
+                disableButtons();
+
+					gui.onHandUpdated();
+            }
+        });
+
+		// doubles possible score
+        doubleDown.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+                blackjack.doubleDown(cards);
+                disableButtons();
+					gui.onHandUpdated();
+            }
+        });
+
         return pane;
-
-
-
     }
 
-
-//needs to be change so that the dealer's second card is only revealed when the last hand is stood or busted
-/*stand.addActionListener(new ActionListener() {
-			public void actionPerformed(ActionEvent e) {
-				game.stand();
-				stand.setEnabled(false);
-				hit.setEnabled(false);
-				northPanel.removeAll();
-				dealerPane = drawPile(game.dealerHand);
-				dealerPane.setPreferredSize(new Dimension(200, 200));
-				northPanel.add(dealerPane);
-				pane = new JTextPane();
-				pane.setText(game.backgroundText);
-				Font boldFont = new Font(pane.getFont().getName(), Font.BOLD, pane.getFont().getSize());
-				pane.setFont(boldFont);
-				pane.setOpaque(false);
-				pane.setEditable(false);
-				eastPanel.add(pane);
-
-				scorePane = new JTextPane();
-				scorePane.setText(""+game.score);
-				scorePane.setFont(boldFont);
-				scorePane.setOpaque(false);
-				scorePane.setEditable(false);
-				westPanel.add(scorePane);
-				update();
-			}
-		});*/
-
+	// makes buttons not work
+	private void disableButtons() {
+        hit.setEnabled(false);
+        stand.setEnabled(false);
+        doubleDown.setEnabled(false);
+        isDone = true;
+	}
 
 }
    

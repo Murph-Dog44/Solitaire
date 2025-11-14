@@ -1,3 +1,5 @@
+// creates the visual elements of the program and updates the screen according to player actions
+
 package resources;
 
 import javax.imageio.ImageIO;
@@ -14,25 +16,28 @@ import java.io.IOException;
 import java.net.URL;
 import java.util.Stack;
 
-public class GUI extends JFrame implements ActionListener, MouseListener, MouseMotionListener {
+public class GUI extends JFrame implements ActionListener {
 
 	Blackjack game;
 	JPanel northPanel;
 	JPanel southPanel;
 	JPanel eastPanel;
 	JPanel westPanel;
+	int gameScore;
+
 	JButton hit;
 	JButton stand;
 	JButton newGame;
 	JButton doubleDown;
 	JButton split;
+
 	JTextPane pane;
 	JTextPane scorePane;
 	JLayeredPane playerPane;
 	JLayeredPane playerPane2;
 	JLayeredPane dealerPane;
-	// hit.addActionListener(new CustomActionListener());
-	// stand.addActionListener(new CustomActionListener());
+	Hand hand1;
+	Hand hand2;
 
 	public GUI(Blackjack game) {
 		this.game = game;
@@ -68,20 +73,12 @@ public class GUI extends JFrame implements ActionListener, MouseListener, MouseM
 			westPanel.setBorder(BorderFactory.createLineBorder(Color.BLUE, 3));
 			westPanel.setPreferredSize(new Dimension(150, 0));
 
-			hit = new JButton("Hit");
-			eastPanel.add(hit);
-
-			doubleDown = new JButton("Double Down");
-			eastPanel.add(doubleDown);
-
-			stand = new JButton("Stand");
-			eastPanel.add(stand);
-			
-			split = new JButton("Split");
-			eastPanel.add(split);
-
+			// adds new game and split buttons to right side
 			newGame = new JButton("New Game");
 			eastPanel.add(newGame);
+
+			split = new JButton("Split");
+			eastPanel.add(split);
 
 			panel.setLayout(new BorderLayout());
 			panel.add(northPanel, BorderLayout.NORTH);
@@ -89,19 +86,13 @@ public class GUI extends JFrame implements ActionListener, MouseListener, MouseM
 			panel.add(southPanel, BorderLayout.SOUTH);
 			panel.add(westPanel, BorderLayout.WEST);
 
-			playerPane = drawPile(game.playerHand);
+
+			// adds player and dealer hands to screen
+			hand1 = new Hand(game.playerHand, game, this);
+			southPanel.add(hand1.returnPane());
+
 			dealerPane = drawPile(game.dealerHand);
-
-			playerPane.setPreferredSize(new Dimension(200, 200));
 			dealerPane.setPreferredSize(new Dimension(200, 200));
-
-			// testing, mr m showed how we could make code work
-			// Card c = new Card(2, Suit.Spades);
-			// c.addAncestorListener(this);
-			// playerPane.add(c);
-
-			// southPanel.setLayout(new FlowLayout(FlowLayout.LEFT, 10, 10));
-			southPanel.add(playerPane);
 			northPanel.add(dealerPane);
 
 			setContentPane(panel);
@@ -110,243 +101,120 @@ public class GUI extends JFrame implements ActionListener, MouseListener, MouseM
 			e.printStackTrace();
 		}
 
-		hit.addActionListener(new ActionListener() {
-			public void actionPerformed(ActionEvent e) {
-				game.hit();
-				if (game.gameOver) {
-					hit.setEnabled(false);
-					stand.setEnabled(false);
-					doubleDown.setEnabled(false);
-					split.setEnabled(false);
-					pane = new JTextPane();
-					pane.setText(game.backgroundText);
-					Font boldFont = new Font(pane.getFont().getName(), Font.BOLD, pane.getFont().getSize());
-					pane.setFont(boldFont);
-					pane.setOpaque(false);
-					pane.setEditable(false);
-					eastPanel.add(pane);
-					
-					scorePane = new JTextPane();
-					scorePane.setText(""+game.score);
-					scorePane.setFont(boldFont);
-					scorePane.setOpaque(false);
-					scorePane.setEditable(false);
-					westPanel.add(scorePane);
-				}
-				southPanel.removeAll();
-				playerPane = drawPile(game.playerHand);
-				playerPane.setPreferredSize(new Dimension(200, 200));
-				southPanel.add(playerPane);
-				northPanel.removeAll();
-				dealerPane = drawPile(game.dealerHand);
-				dealerPane.setPreferredSize(new Dimension(200, 200));
-				northPanel.add(dealerPane);
-				
-				
-				update();
-
-			}
-		});
-
-		stand.addActionListener(new ActionListener() {
-			public void actionPerformed(ActionEvent e) {
-				game.stand();
-				stand.setEnabled(false);
-				hit.setEnabled(false);
-				northPanel.removeAll();
-				dealerPane = drawPile(game.dealerHand);
-				dealerPane.setPreferredSize(new Dimension(200, 200));
-				northPanel.add(dealerPane);
-				pane = new JTextPane();
-				pane.setText(game.backgroundText);
-				Font boldFont = new Font(pane.getFont().getName(), Font.BOLD, pane.getFont().getSize());
-				pane.setFont(boldFont);
-				pane.setOpaque(false);
-				pane.setEditable(false);
-				eastPanel.add(pane);
-
-				scorePane = new JTextPane();
-				scorePane.setText(""+game.score);
-				scorePane.setFont(boldFont);
-				scorePane.setOpaque(false);
-				scorePane.setEditable(false);
-				westPanel.add(scorePane);
-				update();
-			}
-		});
-
-
-
-
-
-
+		// creates a new game
 		newGame.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
 				remakeScreen();
 			}
 		});
 
-
 		split.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
-				if(game.playerHand.get(0).getTrueValue() == game.playerHand.get(1).getTrueValue()){
-				Hand hand1 = new Hand(game.dealerHand);
-				hand1.addCard(game.playerHand.pop());
-				Hand hand2 = new Hand(game.dealerHand);
-				hand1.addCard(game.playerHand.pop());
-				southPanel.add(hand1.returnPane());
-				southPanel.add(hand2.returnPane());
-				hit.setEnabled(false);
-				stand.setEnabled(false);
-				split.setEnabled(false);
-				doubleDown.setEnabled(false);
-				update();
+				// create second hand using shared game and this GUI
+				if (game.playerHand.size() == 2
+						&& game.playerHand.get(0).getTrueValue() == game.playerHand.get(1).getTrueValue()) {
+					game.split();
+					// recreate Hand UIs
+					southPanel.removeAll();
+					hand1 = new Hand(game.playerHand, game, GUI.this);
+					hand2 = new Hand(game.playerHand2, game, GUI.this);
+					southPanel.add(hand1.returnPane());
+					southPanel.add(hand2.returnPane());
+					split.setEnabled(false);
+					update();
 				}
 			}
 		});
 
-		doubleDown.addActionListener(new ActionListener() {
-			public void actionPerformed(ActionEvent e) {
-				game.doubleDown();
-				stand.setEnabled(false);
-				hit.setEnabled(false);
-				doubleDown.setEnabled(false);
-				northPanel.removeAll();
-				dealerPane = drawPile(game.dealerHand);
-				dealerPane.setPreferredSize(new Dimension(200, 200));
-				northPanel.add(dealerPane);
-				southPanel.removeAll();
-				playerPane = drawPile(game.playerHand);
-				playerPane.setPreferredSize(new Dimension(200, 200));
-				southPanel.add(playerPane);
-
-				Font boldFont = new Font(pane.getFont().getName(), Font.BOLD, pane.getFont().getSize());
-				scorePane = new JTextPane();
-				scorePane.setText(""+game.score);
-				scorePane.setFont(boldFont);
-				scorePane.setOpaque(false);
-				scorePane.setEditable(false);
-				westPanel.add(scorePane);
-
-				update();
-			}
-		});
-
-		/*******
-		 * This is just a test to make sure images are being read correctly on your
-		 * machine. Please replace
-		 * once you have confirmed that the card shows up properly. The code below
-		 * should allow you to play the solitare
-		 * game once it's fully created.
-		 */
-
-		// Card card = new Card(2, Card.Suit.Diamonds);
-		// System.out.println(card);
-		// this.add(card);
-
 		this.setVisible(true);
 	}
 
+	// PreCondition: None
+	// PostCondition: resets the screen for a new game
+	public void remakeScreen() {
+		northPanel.removeAll();
+		southPanel.removeAll();
+		eastPanel.removeAll();
+		westPanel.removeAll();
+		eastPanel.add(newGame);
+		eastPanel.add(split);
+		game = new Blackjack();
+		hand1 = new Hand(game.playerHand, game, this);
+		hand2 = null;
+		southPanel.add(hand1.returnPane());
+		dealerPane = drawPile(game.dealerHand);
+		dealerPane.setPreferredSize(new Dimension(200, 200));
+		northPanel.add(dealerPane);
 
-	public void remakeScreen(){
-				northPanel.removeAll();
-				southPanel.removeAll();
-				eastPanel.removeAll();
-				westPanel.removeAll();
-				playerPane.removeAll();
-				dealerPane.removeAll();
-				game.shuffle();
-				game.setGameOver(false);
-				hit.setEnabled(true);
-				stand.setEnabled(true);
-				playerPane = drawPile(game.playerHand);
-				dealerPane = drawPile(game.dealerHand);
-				playerPane.setPreferredSize(new Dimension(200, 200));
-				dealerPane.setPreferredSize(new Dimension(200, 200));
-				southPanel.add(playerPane);
-				northPanel.add(dealerPane);
-				eastPanel.add(hit);
-				eastPanel.add(stand);
-				eastPanel.add(newGame);
-
-				update();
+		update();
 	}
 
-	@Override
-	public void mouseDragged(MouseEvent arg0) {
-		// TODO Auto-generated method stub
-
-	}
-
-	@Override
-	public void mouseMoved(MouseEvent arg0) {
-		// TODO Auto-generated method stub
-
-	}
-
-	@Override
-	public void mouseClicked(MouseEvent arg0) {
-		// TODO Auto-generated method stub
-
-	}
-
-	@Override
-	public void mouseEntered(MouseEvent arg0) {
-		// TODO Auto-generated method stub
-
-	}
-
-	@Override
-	public void mouseExited(MouseEvent arg0) {
-		// TODO Auto-generated method stub
-
-	}
-
-	@Override
-	public void mousePressed(MouseEvent arg0) {
-		// TODO Auto-generated method stub
-		// System.out.println("something happens");// involves logic from the blackjack
-		// class
-		// repaint();
-
-	}
-
-	@Override
-	public void mouseReleased(MouseEvent arg0) {
-		// TODO Auto-generated method stub
-
-	}
-
-	@Override
-	public void actionPerformed(ActionEvent arg0) {
-		// TODO Auto-generated method stub
-
-	}
-
+	//PreCondition: stack of cards is given(either the playerhand or the dealerhand)
+	//PostCondition: layered pane is created after receiving a stack of cards
 	public JLayeredPane drawPile(Stack<Card> stackIn) {
 
 		Object cards[];
 		JLayeredPane cardPane = new JLayeredPane();
-		cards = stackIn.toArray(); // please note we convert this stack to an array so that we can iterate through
-									// it backwards while drawing. You’ll need to cast each element inside cards to
-									// a <Card> in order to use the methods to adjust their position
+		cards = stackIn.toArray();
 		for (int i = 0; i < cards.length; i++) {
 			Card card = (Card) cards[i];
 			Dimension pd = new Dimension(100, 145);
 
-			card.setBounds(i * 30, i * 10, pd.width, pd.height);
+			card.setBounds(i * 30, 0, pd.width, pd.height);
 			cardPane.add(card, i);
 		}
 		return cardPane;
 
 	}
 
-	// action listeners for buttons, call hit and stand methods in blackjack and
-	// then repaint the game after each one.
+	// PreCondition: None
+	// Postcondition: updates the hand contents on screen (used in Hand.java to update the screen when actionlisteners are called in Hand.java)
+	public void onHandUpdated() {
+		// rebuild south and north panels
+		southPanel.removeAll();
+		if (hand1 != null)
+			southPanel.add(hand1.returnPane());
+		if (hand2 != null)
+			southPanel.add(hand2.returnPane());
 
+		northPanel.removeAll();
+		dealerPane = drawPile(game.dealerHand);
+		dealerPane.setPreferredSize(new Dimension(200, 200));
+		northPanel.add(dealerPane);
+
+		// show end-of-round stuff post-game
+		if (game.gameOver) {
+			pane = new JTextPane();
+			pane.setText(game.backgroundText);
+			Font boldFont = new Font(pane.getFont().getName(), Font.BOLD, 16);
+			pane.setFont(boldFont);
+			pane.setOpaque(false);
+			pane.setEditable(false);
+			eastPanel.add(pane);
+
+			scorePane = new JTextPane();
+			gameScore += game.score;
+			scorePane.setText("" + game.score);
+			scorePane.setFont(boldFont);
+			scorePane.setOpaque(false);
+			scorePane.setEditable(false);
+			westPanel.add(scorePane);
+		}
+
+		update();
+	}
+
+
+	// updates the visuals on screen
 	private void update() {
 		this.revalidate();
 		this.repaint();
+	}
+
+	@Override
+	public void actionPerformed(ActionEvent e) {
+		// TODO Auto-generated method stub
+		throw new UnsupportedOperationException("Unimplemented method 'actionPerformed'");
 	}
 
 }
