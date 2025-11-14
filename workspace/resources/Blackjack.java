@@ -68,7 +68,7 @@ public class Blackjack {
 		}
 
 		
-		// checks all of the win conditions a
+		// checks all of the win conditions at the beginning (if either the player and/or the dealer got )
 		if (countPlayer == 21 && dealerValue == 21) {
 			backgroundText = "Push!";
 			gameOver = true;
